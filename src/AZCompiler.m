@@ -23,7 +23,7 @@
 
 
 #import "AZNode.h"
-extern AZStatements *code;
+extern AZDeclares *master;
 extern FILE* yyin;
 extern int yyparse();
 
@@ -53,8 +53,10 @@ int main(int argc, char **argv) {
 		NSLog(@"compiling: %@", masterFile);
 
 		yyin = fopen(argv[1], "r");
-		yyparse();
-		[code compile];
+		if (yyparse()) {
+			return 1;
+		}
+		[master compile];
 		fclose(yyin);
 
 		NSLog(@"header: %@", headerFile);

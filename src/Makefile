@@ -10,5 +10,8 @@ AZParser.m: AZParser.y
 	bison -d -o AZParser.c $^
 	mv AZParser.c AZParser.m
 
+AZNode.m: AZNode.h
+	touch AZNode.m
+
 azikalao: AZTokens.m AZParser.m AZCompiler.m AZNode.m
 	clang -fobj-arc -framework Foundation -o $@ $^

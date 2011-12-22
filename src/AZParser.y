@@ -23,129 +23,184 @@
 // SOFTWARE.
 
 #import "AZNode.h"
-AZStatements *code;
+AZDeclares *master;
 
 extern int yylex();
-void yyerror(const char *msg) {
-    printf("Something went wrong: %s\n", msg);
-}
+void yyerror(const char *msg);
 
 #define CHKARR(x) if (x == nil) x = [NSMutableArray new]
+
+NSString *azpropmods(NSString *s1, NSString *s2);
+NSString *azcomment(NSString *s);
 
 %}
 
 %union {
-    AZNode              *node;
-    AZRequire           *requ;
-    AZStatements        *stms;
-    AZClassDefinition   *clas;
-    AZMethodDefinition  *meth;
-    AZText              *text;
+    AZNode          *node;
+    AZDeclares      *decl;
+    AZRequire       *requ;
+    AZClass         *clas;
+    AZText          *text;
+    AZProperty      *prop;
+    AZMethod        *meth;
+    AZVarDecl       *vard;
 
-    NSMutableArray      *array;
-    NSString            *string;
-    int                 token;
+    NSString        *strn;
+    int             token;
 }
 
 /* tokens */
-%token <string> TSP TNL TID TFL TIN TS1 TS2 TCM TEO
-%token <token>  TRE TCL TEN TDE
-%token <token>  TIF
-%token <token>  TLP TRP TAT TCO TLT TGT
+%token <strn>   TIDENTIFIER
+%token <token>  TREQUIRE
+%token <token>  TCLASS
+%token <token>  TEND
+%token <token>  TDEF
+%token <token>  TATTR
+%token <token>  TLESSTHAN
+%token <token>  TGREATTHAN
+%token <token>  TLEFTPAREN
+%token <token>  TRIGHTPAREN
+%token <token>  TCOMMA
+%token <token>  TAT
+%token <strn>   TNL
+%token <strn>   TCOMMENT
+%token <strn>   TSTRING
 
 /* types */
-%type <stms> program statements
-%type <requ> require
-%type <node> statement
-%type <clas> class_definition
-%type <meth> method_definition
-%type <text> comment empty_line
-%type <array> method_definitions
-%type <string> identifier
+%type <decl>    program
+%type <decl>    declarations
+%type <node>    declaration
+%type <requ>    require
+%type <clas>    class
+%type <clas>    class_declaration
+%type <decl>    class_body
+%type <node>    class_body_element
+%type <text>    comment_line
+%type <text>    empty_line
+%type <meth>    class_method
+%type <prop>    class_property
+%type <strn>    class_property_mods
+%type <vard>    var_decl
 
 %start program
 
 %%
 
 program
-    : statements
-        { code = $1; }
+    :   declarations
+        { master = $1; }
     ;
 
-statements
-    : statement
-        { $$ = [[AZStatements alloc] init]; [$$.statements addObject:$1]; }
-    | statements statement
-        { [$1.statements addObject:$2]; }
+declarations
+    :   declaration
+        { $$ = [AZDeclares new]; [$$.decls addObject:$1]; }
+    |   declarations declaration
+        { [$1.decls addObject:$2]; }
     ;
 
-statement
-    : empty_line
-        { $$ = $1;}
-    | comment
-        { $$ = $1;}
-    | require
+declaration
+    :   require
         { $$ = $1; }
-    | class_definition
+    |   class
+        { $$ = $1; }
+    |   comment_line
+        { $$ = $1; }
+    |   empty_line
         { $$ = $1; }
     ;
 
 require
-    : TRE TS1 TEO
-        { $$ = [AZRequire new]; $$.path = $2; }
-    | TRE TS2 TEO
+    :   TREQUIRE TSTRING
         { $$ = [AZRequire new]; $$.path = $2; }
     ;
 
-class_definition
-    : TCL identifier TEO
-        method_definitions
-      TEN
-        { $$ = [AZClassDefinition new]; $$.name = $2; $$.methods = $4; }
-    | TCL identifier TLT identifier TEO
-        method_definitions
-      TEN
-        { $$ = [AZClassDefinition new]; $$.name = $2; $$.parent = $4; $$.methods = $6; }
-    | TCL identifier TLP identifier TRP TEO
-        method_definitions
-      TEN
-        { $$ = [AZClassDefinition new]; $$.name = $2; $$.category = $4; $$.methods = $7; }
+class
+    :   class_declaration
+        TEND
+        { $$ = $1; }
+    |   class_declaration
+            class_body
+        TEND
+        { $$ = $1; $$.decls = $2.decls; }
     ;
 
-method_definitions
-    : /* empty */
-        { $$ = nil; }
-    | method_definition
-        { $$ = [NSMutableArray new]; [$$ addObject:$1]; }
-    | method_definitions method_definition
-        { CHKARR($$); [$$ addObject: $2]; }
-    | method_definitions comment
-        { CHKARR($$); [$$ addObject: $2]; }
-    | method_definitions empty_line
-        { CHKARR($$); [$$ addObject: $2]; }
-    ;
-    
-method_definition
-    : TDE identifier TEO
-      TEN TEO
-        { $$ = [AZMethodDefinition new]; $$.name = $2; }
-    | TDE identifier TGT identifier TEO
-      TEN TEO
-        { $$ = [AZMethodDefinition new]; $$.name = $2; $$.returnType = $4; }
+class_declaration
+    :   TCLASS TIDENTIFIER TNL
+        { $$ = [AZClass new]; $$.name = $2; }
+    |   TCLASS TIDENTIFIER TLESSTHAN TIDENTIFIER TNL
+        { $$ = [AZClass new]; $$.name = $2; $$.parent = $4; }
+    |   TCLASS TIDENTIFIER TLEFTPAREN TIDENTIFIER TRIGHTPAREN TNL
+        { $$ = [AZClass new]; $$.name = $2; $$.category = $4; }
     ;
 
-comment
-    : TCM
-        { $$ = [AZText new]; $$.text = [NSString stringWithFormat:@"//%@", [$1 substringFromIndex:1]]; }
+class_body
+    :   class_body_element
+        { $$ = [AZDeclares new]; [$$.decls addObject:$1]; }
+    |   class_body class_body_element
+        { [$1.decls addObject:$2]; }
+    ;
+
+class_body_element
+    :   class_method
+        { $$ = $1; }
+    |   class_property
+        { $$ = $1; }
+    |   comment_line
+        { $$ = $1; }
+    |   empty_line
+        { $$ = $1; }
+    ;
+
+class_method
+    :   TDEF TIDENTIFIER TNL
+        TEND
+        { $$ = [AZMethod new]; $$.name = $2; }
+    |   TDEF TIDENTIFIER TGREATTHAN TIDENTIFIER TNL
+        TEND
+        { $$ = [AZMethod new]; $$.name = $2; $$.returnType = $4; }
+    ;
+
+class_property
+    :   TATTR var_decl
+        { $$ = [AZProperty new]; $$.vard = $2; }
+    |   TATTR TLEFTPAREN class_property_mods TRIGHTPAREN var_decl
+        { $$ = [AZProperty new]; $$.vard = $5; $$.mods = $3; }
+    ;
+
+class_property_mods
+    :   TIDENTIFIER
+        { $$ = $1; }
+    |   class_property_mods TCOMMA TIDENTIFIER
+        { $$ = azpropmods($1, $3); }
+    ;
+
+var_decl
+    :   TIDENTIFIER TAT TIDENTIFIER
+        { $$ = [AZVarDecl new]; $$.type = $1; $$.name = $3; $$.pntr = YES; }
+    |   TIDENTIFIER TIDENTIFIER
+        { $$ = [AZVarDecl new]; $$.type = $1; $$.name = $2;}
+    ;
+
+comment_line
+    :   TCOMMENT
+        { $$ = [AZText new]; $$.text = azcomment($1); }
     ;
 
 empty_line
-    : TEO
+    :   TNL
         { $$ = [AZText new]; $$.text = $1; }
     ;
 
-identifier
-    : TID { $$ = $1; }
-    ;
-
 %%
+
+void yyerror(const char *msg) {
+     fprintf(stderr, "Something went wrong: %s\n", msg);
+}
+
+NSString *azpropmods(NSString *s1, NSString *s2) {
+    return [NSString stringWithFormat:@"%@,%@", s1, s2];
+}
+
+NSString *azcomment(NSString *s) {
+    return [NSString stringWithFormat:@"//%@", [s substringFromIndex:1]];
+}

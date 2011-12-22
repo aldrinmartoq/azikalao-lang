@@ -27,52 +27,78 @@ extern NSMutableString *source;
 extern NSMutableString *header;
 
 @implementation AZNode
-
 - (id) init {
 	if (self = [super init] ) {
-		// NSLog(@"Creating: %@", self);
+		AZLog(@"Creating: %@", self);
 	}
-	
+
 	return self;
 }
-
 - (void) compile {
+	AZLog(@"Compile %@", self);
 }
 @end
 
-@implementation AZStatements
-@synthesize statements;
-
+@implementation AZDeclares
+@synthesize decls;
 - (id) init {
-	if ( self = [super init] ) {
-		statements = [[NSMutableArray alloc] init];
+	if (self = [super init] ) {
+		decls = [NSMutableArray new];
 	}
-	
+
 	return self;
 }
-
 - (void) compile {
-	for (AZNode *n in statements) {
+	[super compile];
+
+	for (AZNode *n in decls) {
 		[n compile];
 	}
 }
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ %d decls.", [self class], [[self decls] count]];
+}
+@end
+
+@implementation AZText
+@synthesize text;
+- (void) compile {
+	[super compile];
+
+	[header appendString:text];
+	[source appendString:text];
+}
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ text: %@", [self class], text];
+}
+@end
+
+@implementation AZVarDecl
+@synthesize type;
+@synthesize name;
+@synthesize pntr;
 @end
 
 @implementation AZRequire
 @synthesize path;
-
 - (void) compile {
-	[header appendFormat:@"#import %@\n", path];
+	[super compile];
+
+	[header appendFormat:@"#import %@", path];
+}
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ path: %@", [self class], path];
 }
 @end
 
-@implementation AZClassDefinition
+@implementation AZClass
 @synthesize name;
 @synthesize parent;
 @synthesize category;
-@synthesize methods;
-
+@synthesize decls;
 - (void) compile {
+	[super compile];
+
 	[header appendFormat:@"@interface %@", name];
 	if (parent) {
 		[header appendFormat:@" : %@", parent];
@@ -87,33 +113,54 @@ extern NSMutableString *header;
 		[source appendFormat:@" (%@)", category];
 	}
 	[source appendString:@"\n"];
-	
-	for (AZMethodDefinition *m in methods) {
-		[m compile];
+
+	for (AZNode *p in decls) {
+		[p compile];
 	}
 
 	[header appendFormat:@"@end"];
 	[source appendFormat:@"@end"];
 }
-@end
-
-@implementation AZMethodDefinition
-@synthesize name;
-@synthesize returnType;
-
-- (void) compile {
-	NSString *type = [NSString stringWithFormat:@"%@", (returnType ? returnType : @"void") ];
-	
-	[header appendFormat:@"- (%@) %@;\n", type, name];
-	[source appendFormat:@"- (%@) %@ {}\n", type, name];
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ name: %@ parent: %@ category: %@ decls: %d", [self class], name, parent, category, [decls count]];
 }
 @end
 
-@implementation AZText
-@synthesize text;
-
+@implementation AZProperty
+@synthesize mods;
+@synthesize vard;
 - (void) compile {
-	[header appendString:text];
-	[source appendString:text];
+	[super compile];
+
+	[header appendFormat:@"@property "];
+	if (mods) {
+		[header appendFormat:@"(%@) ", mods];
+	}
+	[header appendFormat:@"%@ ", vard.type];
+	if (vard.pntr) {
+		[header appendString:@"*"];
+	}
+	[header appendFormat:@"%@;", vard.name];
+
+	[source appendFormat:@"@synthesize %@", vard.name];
+}
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ mods: %@ vard: %@", [self class], mods, vard];
+}
+@end
+
+@implementation AZMethod
+@synthesize name;
+@synthesize returnType;
+- (void) compile {
+	[super compile];
+
+	NSString *type = [NSString stringWithFormat:@"%@", (returnType ? returnType : @"void") ];
+	
+	[header appendFormat:@"- (%@) %@;", type, name];
+	[source appendFormat:@"- (%@) %@ {}", type, name];
+}
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ name: %@ returnType: %@", [self class], name, returnType];
 }
 @end

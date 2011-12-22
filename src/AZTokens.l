@@ -25,46 +25,48 @@
 #import "AZNode.h"
 #import "AZParser.h"
 
-#define DBGSIMPLE(t)  printf("%s\n", #t); return (yylval.token = t)
-#define DBGCOMPLEX(t) printf("%s - %s\n", #t, yytext); yylval.string = [[NSString alloc] initWithBytes:yytext length:yyleng encoding:NSASCIIStringEncoding]; return t
-
-#define SIMPLE(t)  return (yylval.token = t)
-#define COMPLEX(t) yylval.string = [[NSString alloc] initWithBytes:yytext length:yyleng encoding:NSASCIIStringEncoding]; return t
+#if AZDEBUG
+#define TOK(t)  fprintf(stderr, "%s\n", #t); return (yylval.token = t)
+#define STR(t) fprintf(stderr, "%s - %s\n", #t, yytext); yylval.strn = [[NSString alloc] initWithBytes:yytext length:yyleng encoding:NSASCIIStringEncoding]; return t
+#else
+#define TOK(t)  return (yylval.token = t)
+#define STR(t) yylval.strn = [[NSString alloc] initWithBytes:yytext length:yyleng encoding:NSASCIIStringEncoding]; return t
+#endif
 
 %}
 
+%option noyywrap
+
 D           [0-9]
 L           [a-zA-Z_]
+LL          [a-zA-Z0-9_]
 H           [a-fA-F0-9]
 E           [Ee][+-]?{D}+
 FS          (f|F|l|L)
 IS          (u|U|l|L)*
 
-%option noyywrap
-
 %%
 
-"require"               SIMPLE(TRE);        // require
-"class"                 SIMPLE(TCL);        // class
-"end"                   SIMPLE(TEN);        // end
-"def"                   SIMPLE(TDE);        // def
+"require"               TOK(TREQUIRE);      // require
+"class"                 TOK(TCLASS);        // class
+"end"                   TOK(TEND);          // end
+"def"                   TOK(TDEF);          // def
+"attr"                  TOK(TATTR);         // attr
 
-"("                     SIMPLE(TLP);        // left parent
-")"                     SIMPLE(TRP);        // right parent
-"<"                     SIMPLE(TLT);        // less than
-">"                     SIMPLE(TGT);        // less than
-"@"                     SIMPLE(TAT);        // at
-":"                     SIMPLE(TCO);        // colon
+"<"                     TOK(TLESSTHAN);     // less than
+">"                     TOK(TGREATTHAN);    // greater than
+"("                     TOK(TLEFTPAREN);    // left parent
+")"                     TOK(TRIGHTPAREN);   // right parent
+","                     TOK(TCOMMA);        // comma
+"@"                     TOK(TAT);           // at
 
-L?\"(\\.|[^\\"])*\"     COMPLEX(TS1);       // string
-L?\<(\\.|[^\n])*\>     COMPLEX(TS2);       // string
-\#.*\n                  COMPLEX(TCM);       // comment
+\"(\\.|[^\\"])*\"       STR(TSTRING);       // string
+\<(\\.|[^\n])*\>        STR(TSTRING);       // path string <...>
+\#.*\n                  STR(TCOMMENT);      // comments start from # to end of line
 
-[ \t]*\n                COMPLEX(TEO);       // ENDOFLINE
-[ \t]+                  ; // SAVE_TOKEN; return TSP; // spaces
-[a-zA-Z_][a-zA-Z0-9_]*  COMPLEX(TID); // identifier
-[0-9]+\.[0-9]*          COMPLEX(TFL); // float
-[0-9]+                  COMPLEX(TIN); // integer
+{L}{LL}*                STR(TIDENTIFIER);   // identifier
+[ \t]*\n                STR(TNL);           // new line
+[ \t]+                  ;                   // spaces
 .                       printf("Unknown token :-/\n"); yyterminate();
 
 %%

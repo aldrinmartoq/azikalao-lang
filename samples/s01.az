@@ -1,5 +1,5 @@
-# sample code
-# Aldrin Martoq
+# sample code: class definition examples
+# by Aldrin Martoq
 
 require <Foundation/Foundation.h>
 require "MyOtherClass.h"
@@ -19,9 +19,11 @@ class Bar (Others)
     end
 end
 
-class Qux < NSObject
-#   prp (retain) NSString @something
-    
+class Baz < NSObject
+    attr BOOL test
+    attr (retain) NSString @test
+    attr (retain,nonatomic) BOOL another
+
     def init > id
     end
 end

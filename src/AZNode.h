@@ -23,30 +23,50 @@
 
 #import <Foundation/Foundation.h>
 
+// enable-disable parser/lexer debugging
+#define AZDEBUG 0
+
+#if AZDEBUG
+#define AZLog(x, ...)	NSLog(x, __VA_ARGS__)
+#else
+#define AZLog(x, ...)
+#endif
+
 @interface AZNode : NSObject
 - (void) compile;
 @end
 
-@interface AZStatements : AZNode
-@property (retain) NSMutableArray *statements;
+@interface AZDeclares : AZNode
+@property (retain) NSMutableArray *decls;
+@end
+
+@interface AZText : AZNode
+@property (retain) NSString *text;
+@end
+
+@interface AZVarDecl : AZNode
+@property (retain) NSString *type;
+@property (retain) NSString *name;
+@property BOOL pntr;
 @end
 
 @interface AZRequire : AZNode
 @property (retain) NSString *path;
 @end
 
-@interface AZClassDefinition : AZNode
+@interface AZClass : AZNode
 @property (retain) NSString *name;
 @property (retain) NSString *parent;
 @property (retain) NSString *category;
-@property (retain) NSMutableArray *methods;
+@property (retain) NSMutableArray *decls;
 @end
 
-@interface AZMethodDefinition : AZNode
+@interface AZProperty : AZNode
+@property (retain) NSString *mods;
+@property (retain) AZVarDecl *vard;
+@end
+
+@interface AZMethod : AZNode
 @property (retain) NSString *name;
 @property (retain) NSString *returnType;
-@end
-
-@interface AZText : AZNode
-@property (retain) NSString *text;
 @end
