@@ -66,6 +66,7 @@ To compile this to your machine, you should run something like this:
 Everything is developed on a OS X Lion system. If you want to try it on Linux or other systems, you'll have to collect and build all the pieces.
 
 Current requirements are:
+
 - clang compiler from LLVM
 - an Objective-C runtime
 - Automatic Reference Counting (ARC) support
