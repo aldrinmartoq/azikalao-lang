@@ -1,0 +1,14 @@
+# sample code for azikalao
+require <Foundation/Foundation.h>
+require "MyOtherClass.h"
+
+class Foo
+end
+
+class Bar < NSObject
+    def init > id
+    end
+    
+    def something
+    end
+end

@@ -1,0 +1,27 @@
+# sample code
+# Aldrin Martoq
+
+require <Foundation/Foundation.h>
+require "MyOtherClass.h"
+
+class Foo
+end
+
+class Bar < NSObject
+    def something
+    end
+end
+
+
+# sample class extension
+class Bar (Others)
+    def something_else
+    end
+end
+
+class Qux < NSObject
+#   prp (retain) NSString @something
+    
+    def init > id
+    end
+end
