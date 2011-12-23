@@ -52,6 +52,8 @@ IS          (u|U|l|L)*
 "end"                   TOK(TEND);          // end
 "def"                   TOK(TDEF);          // def
 "attr"                  TOK(TATTR);         // attr
+"return"                STR(TRETURN);       // return
+"if"                    STR(TIF);           // if
 
 "<"                     TOK(TLESSTHAN);     // less than
 ">"                     TOK(TGREATTHAN);    // greater than
@@ -59,6 +61,8 @@ IS          (u|U|l|L)*
 ")"                     TOK(TRIGHTPAREN);   // right parent
 ","                     TOK(TCOMMA);        // comma
 "@"                     TOK(TAT);           // at
+"."                     TOK(TDOT);          // dot
+"="                     TOK(TEQUAL);        // dot
 
 \"(\\.|[^\\"])*\"       STR(TSTRING);       // string
 \<(\\.|[^\n])*\>        STR(TSTRING);       // path string <...>

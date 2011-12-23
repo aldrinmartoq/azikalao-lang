@@ -32,6 +32,8 @@ void yyerror(const char *msg);
 
 NSString *azpropmods(NSString *s1, NSString *s2);
 NSString *azcomment(NSString *s);
+AZText *aztxt(NSString *s);
+AZText *aznl();
 
 %}
 
@@ -44,6 +46,9 @@ NSString *azcomment(NSString *s);
     AZProperty      *prop;
     AZMethod        *meth;
     AZVarDecl       *vard;
+    AZMethodCall    *mcall;
+    AZExpr          *expr;
+    AZAssignment    *asig;
 
     NSString        *strn;
     int             token;
@@ -56,12 +61,17 @@ NSString *azcomment(NSString *s);
 %token <token>  TEND
 %token <token>  TDEF
 %token <token>  TATTR
+%token <strn>   TRETURN
+%token <strn>   TIF
+
 %token <token>  TLESSTHAN
 %token <token>  TGREATTHAN
 %token <token>  TLEFTPAREN
 %token <token>  TRIGHTPAREN
 %token <token>  TCOMMA
 %token <token>  TAT
+%token <token>  TDOT
+%token <token>  TEQUAL
 %token <strn>   TNL
 %token <strn>   TCOMMENT
 %token <strn>   TSTRING
@@ -81,6 +91,11 @@ NSString *azcomment(NSString *s);
 %type <prop>    class_property
 %type <strn>    class_property_mods
 %type <vard>    var_decl
+%type <mcall>   method_call
+%type <decl>    class_method_body
+%type <node>    class_method_body_element
+%type <asig>    assignment
+%type <expr>    expression
 
 %start program
 
@@ -155,9 +170,44 @@ class_method
     :   TDEF TIDENTIFIER TNL
         TEND
         { $$ = [AZMethod new]; $$.name = $2; }
+    |   TDEF TIDENTIFIER TNL
+            class_method_body
+        TEND
+        { $$ = [AZMethod new]; $$.name = $2; $$.decls = $4.decls; }
     |   TDEF TIDENTIFIER TGREATTHAN TIDENTIFIER TNL
         TEND
         { $$ = [AZMethod new]; $$.name = $2; $$.returnType = $4; }
+    |   TDEF TIDENTIFIER TGREATTHAN TIDENTIFIER TNL
+            class_method_body
+        TEND
+        { $$ = [AZMethod new]; $$.name = $2; $$.returnType = $4; $$.decls = $6.decls; }
+    ;
+
+class_method_body
+    :   class_method_body_element
+        { $$ = [AZDeclares new]; [$$.decls addObject:$1]; [$$.decls addObject:aznl()]; }
+    |   class_method_body class_method_body_element
+        { [$1.decls addObject:$2]; [$1.decls addObject:aznl()]; }
+    ;
+
+class_method_body_element
+    :   method_call TNL
+        { $$ = $1; $$.sent = YES; }
+    |   assignment TNL
+        { $$ = $1; $$.sent = YES; }
+    |   var_decl TNL
+        { $$ = $1; $$.sent = YES; }
+    |   TRETURN expression TNL
+        { $$ = $2; [$2 preadd:aztxt($1)]; $$.sent = YES; }
+    ;
+
+expression
+    :   TIDENTIFIER
+        { $$ = [AZExpr new]; [$$ add:aztxt($1)]; }
+    |   TAT TIDENTIFIER
+        { $$ = [AZExpr new]; [$$ add:aztxt($2)]; }
+    |   method_call
+        { $$ = [AZExpr new]; [$$ add:$1]; }
     ;
 
 class_property
@@ -179,6 +229,22 @@ var_decl
         { $$ = [AZVarDecl new]; $$.type = $1; $$.name = $3; $$.pntr = YES; }
     |   TIDENTIFIER TIDENTIFIER
         { $$ = [AZVarDecl new]; $$.type = $1; $$.name = $2;}
+    ;
+
+method_call
+    :   TAT TIDENTIFIER TDOT TIDENTIFIER
+        { $$ = [AZMethodCall new]; $$.objectName = $2; $$.methodName = $4; }
+    |   method_call TDOT TIDENTIFIER
+        { $$ = [AZMethodCall new]; $$.objectName = [$1 source]; $$.methodName = $3; }
+    ;
+
+assignment
+    :   var_decl TEQUAL expression
+        { $$ = [AZAssignment new]; $$.vard = $1; $$.expr = $3; }
+    |   TIDENTIFIER TEQUAL expression
+        { $$ = [AZAssignment new]; $$.vard = [AZVarDecl new]; $$.vard.name = $1; $$.expr = $3; }
+    |   TAT TIDENTIFIER TEQUAL expression
+        { $$ = [AZAssignment new]; $$.vard = [AZVarDecl new]; $$.vard.name = $2; $$.expr = $4; }
     ;
 
 comment_line
@@ -203,4 +269,17 @@ NSString *azpropmods(NSString *s1, NSString *s2) {
 
 NSString *azcomment(NSString *s) {
     return [NSString stringWithFormat:@"//%@", [s substringFromIndex:1]];
+}
+
+AZText *aztxt(NSString *s) {
+    AZText *a = [AZText new];
+    a.text = s;
+
+    return a;
+}
+AZText *aznl() {
+    AZText *a = [AZText new];
+    a.text = @"\n";
+
+    return a;
 }

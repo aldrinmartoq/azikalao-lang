@@ -27,6 +27,7 @@ extern NSMutableString *source;
 extern NSMutableString *header;
 
 @implementation AZNode
+@synthesize sent;
 - (id) init {
 	if (self = [super init] ) {
 		AZLog(@"Creating: %@", self);
@@ -36,6 +37,9 @@ extern NSMutableString *header;
 }
 - (void) compile {
 	AZLog(@"Compile %@", self);
+}
+- (NSString *) source {
+	return @"";
 }
 @end
 
@@ -68,6 +72,9 @@ extern NSMutableString *header;
 	[header appendString:text];
 	[source appendString:text];
 }
+- (NSString *) source {
+	return text;
+}
 - (NSString *) description {
 	return [NSString stringWithFormat:@"%@ text: %@", [self class], text];
 }
@@ -77,6 +84,15 @@ extern NSMutableString *header;
 @synthesize type;
 @synthesize name;
 @synthesize pntr;
+- (void) compile {
+	[super compile];
+
+	[source appendFormat:@"%@ ", type];
+	if (pntr) {
+		[source appendString:@"*"];
+	}
+	[source appendFormat:@"%@", name];
+}
 @end
 
 @implementation AZRequire
@@ -142,7 +158,7 @@ extern NSMutableString *header;
 	}
 	[header appendFormat:@"%@;", vard.name];
 
-	[source appendFormat:@"@synthesize %@", vard.name];
+	[source appendFormat:@"@synthesize %@;", vard.name];
 }
 - (NSString *) description {
 	return [NSString stringWithFormat:@"%@ mods: %@ vard: %@", [self class], mods, vard];
@@ -152,15 +168,95 @@ extern NSMutableString *header;
 @implementation AZMethod
 @synthesize name;
 @synthesize returnType;
+@synthesize decls;
 - (void) compile {
 	[super compile];
 
 	NSString *type = [NSString stringWithFormat:@"%@", (returnType ? returnType : @"void") ];
 	
 	[header appendFormat:@"- (%@) %@;", type, name];
-	[source appendFormat:@"- (%@) %@ {}", type, name];
+	[source appendFormat:@"- (%@) %@ {\n", type, name];
+	for (AZNode *n in decls) {
+		[n compile];
+		if (n.sent) {
+			[source appendFormat:@";"];
+		}
+	}
+	[source appendFormat:@"}"];
 }
 - (NSString *) description {
 	return [NSString stringWithFormat:@"%@ name: %@ returnType: %@", [self class], name, returnType];
+}
+@end
+
+@implementation AZMethodCall
+@synthesize objectName;
+@synthesize methodName;
+- (NSString *) source {
+	return [NSString stringWithFormat:@"[%@ %@]", objectName, methodName];
+}
+- (void) compile {
+	[super compile];
+
+	[source appendString:[self source]];
+}
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ objectName: %@ methodName: %@", [self class], objectName, methodName];
+}
+@end
+
+@implementation AZExpr
+@synthesize things;
+- (id) init {
+	if (self = [super init]) {
+		things = [NSMutableArray new];
+	}
+
+	return self;
+}
+- (void) preadd:(AZNode *)node {
+	AZLog(@"expr preadd: %@", node);
+	[things insertObject:node atIndex:0];
+}
+- (void) add:(AZNode *)node {
+	AZLog(@"expr add: %@", node);
+	[things addObject:node];
+}
+- (void) compile {
+	[super compile];
+
+	[source appendString:[self source]];
+}
+- (NSString *) source {
+	NSMutableArray *a = [NSMutableArray new];
+
+	for (AZNode *n in things) {
+		[a addObject:[n source]];
+	}
+
+	return [a componentsJoinedByString:@" "];
+}
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ things: %d", [self class], things.count];
+}
+@end
+
+@implementation AZAssignment
+@synthesize vard;
+@synthesize expr;
+- (void) compile {
+	[super compile];
+
+	if (vard.type) {
+		[source appendFormat:@"%@ ", vard.type];
+		if (vard.pntr) {
+			[source appendFormat:@"*"];
+		}
+	}
+	[source appendFormat:@"%@ = ", vard.name];
+	[expr compile];
+}
+- (NSString *) description {
+	return [NSString stringWithFormat:@"%@ vard: %@ expr: %@", [self class], vard, expr];
 }
 @end

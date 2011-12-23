@@ -24,7 +24,7 @@
 #import <Foundation/Foundation.h>
 
 // enable-disable parser/lexer debugging
-#define AZDEBUG 0
+#define AZDEBUG 1
 
 #if AZDEBUG
 #define AZLog(x, ...)	NSLog(x, __VA_ARGS__)
@@ -33,7 +33,9 @@
 #endif
 
 @interface AZNode : NSObject
+@property BOOL sent;
 - (void) compile;
+- (NSString *) source;
 @end
 
 @interface AZDeclares : AZNode
@@ -69,4 +71,21 @@
 @interface AZMethod : AZNode
 @property (retain) NSString *name;
 @property (retain) NSString *returnType;
+@property (retain) NSMutableArray *decls;
+@end
+
+@interface AZMethodCall : AZNode
+@property (retain) NSString *objectName;
+@property (retain) NSString *methodName;
+@end
+
+@interface AZExpr : AZNode
+@property (retain) NSMutableArray *things;
+- (void) preadd:(AZNode *)node;
+- (void) add:(AZNode *)node;
+@end
+
+@interface AZAssignment : AZNode
+@property (retain) AZVarDecl *vard;
+@property (retain) AZExpr	 *expr;
 @end

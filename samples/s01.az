@@ -2,7 +2,7 @@
 # by Aldrin Martoq
 
 require <Foundation/Foundation.h>
-require "MyOtherClass.h"
+# require "MyOtherClass.h"
 
 class Foo
 end
@@ -20,10 +20,14 @@ class Bar (Others)
 end
 
 class Baz < NSObject
-    attr BOOL test
+    attr BOOL valor
     attr (retain) NSString @test
-    attr (retain,nonatomic) BOOL another
+    attr (nonatomic) BOOL another
 
     def init > id
+        @self = @super.init
+        NSString @other = @NSString.alloc.init
+        @other = @self.description
+        return self
     end
 end
